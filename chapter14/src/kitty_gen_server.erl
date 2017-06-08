@@ -25,7 +25,8 @@ handle_call(Request, From, State) ->
   {reply, ["myResult"], State}.
 
 handle_cast(Request, State) ->
-  erlang:error(not_implemented).
+  io:format("[~p]Server handle a cast, Request:~p, State:~p~n", [self(), Request, State]),
+  {reply, ["myResult"], State}.
 
 handle_info(Info, State) ->
   erlang:error(not_implemented).
