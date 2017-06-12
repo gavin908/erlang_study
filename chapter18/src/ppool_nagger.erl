@@ -13,6 +13,7 @@
   handle_info/2, code_change/3, terminate/2]).
 
 start_link(Task, Delay, Max, SendTo) ->
+  io:format("[~p]The pool worker start_link.~nparam:~p~n", [self(), {Task, Delay, Max, SendTo}]),
   gen_server:start_link(?MODULE, {Task, Delay, Max, SendTo}, []).
 
 stop(Pid) ->
@@ -20,6 +21,7 @@ stop(Pid) ->
 
 
 init({Task, Delay, Max, SendTo}) ->
+  io:format("[~p]The pool worker inited, param:~p~n", [self(), {Task, Delay, Max, SendTo}]),
   {ok, {Task, Delay, Max, SendTo}, Delay}.
 
 %%% OTP Callbacks
@@ -31,7 +33,8 @@ handle_call(_Msg, _From, State) ->
 handle_cast(_Msg, State) ->
   {noreply, State}.
 
-handle_info(timeout, {Task, Delay, Max, SendTo}) ->
+handle_info(timeout, P = {Task, Delay, Max, SendTo}) ->
+  io:format("[~p]The pool worker handle a info, param:~p~n", [self(), P]),
   SendTo ! {self(), Task},
   if Max =:= infinity ->
     {noreply, {Task, Delay, Max, SendTo}, Delay};

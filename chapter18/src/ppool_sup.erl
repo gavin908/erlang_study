@@ -17,6 +17,7 @@
 init({Name, Limit, MFA}) ->
   MaxRestart = 1,
   MaxTime = 3600,
+  io:format("[~p]The pool supervisor inited.~n", [self()]),
   {ok, {{one_for_all, MaxRestart, MaxTime},
     [{serv, {ppool_serv, start_link, [Name, Limit, self(), MFA]},
       permanent,

@@ -23,7 +23,8 @@ stop_pool(Name) ->
   ppool_supersup:stop_pool(Name).
 
 run(Name, Args) ->
-  ppool_serv:run(Name, Args).
+  ChildSpec = {ppool_worker, {ppool_nagger, start_link, Args}, temporary, 5000, worker, [ppool_nagger]},
+  ppool_serv:run(Name, ChildSpec).
 
 async_queue(Name, Args) ->
   ppool_serv:async_queue(Name, Args).

@@ -11,9 +11,10 @@
 %% API
 -export([init/1, start_link/1]).
 
-init({M, F, A}) ->
+init(P = {M, F, A}) ->
   MaxRestart = 5,
   MaxTime = 3600,
+  io:format("[~p]The pool worker supervisor inited, param:~p~n", [self(), P]),
   {ok, {
     {simple_one_for_one, MaxRestart, MaxTime},
     [

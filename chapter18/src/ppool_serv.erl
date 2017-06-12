@@ -37,17 +37,20 @@ stop(Name) ->
 
 -record(state, {limit = 0, sup, refs, queue = queue:new()}).
 %%-----------------------------------------
-init({Limit, MFA, Sup}) ->
+init(P = {Limit, MFA, Sup}) ->
   %% {ok, Pid} = supervisor:start_child(Sup, ?SPEC(MFA)),
   %% %% 这里会死锁，在gen_*行为中，启动该行为的进程会一直等到init/1函数返回才会恢复运行。
   self() ! {start_worker_supervisor, Sup, MFA},
-  {ok, #state{limit = Limit, refs = gb_sets:empty()}}.
+  io:format("[~p]The pool server inited, param: ~p~n", [self(), P]),
+  {ok, #state{limit = Limit, refs = gb_sets:empty(), sup = Sup}}.
 
-handle_call({run, Args}, _From, S = #state{limit = N, sup = Sup, refs = R}) when N > 0 ->
+handle_call(P = {run, Args}, _From, S = #state{limit = N, sup = Sup, refs = R}) when N > 0 ->
+  io:format("[~p]The pool Server handle a call, Param:~p Status:~p~n", [self(), P, S]),
   {ok, Pid} = supervisor:start_child(Sup, Args),
   Ref = erlang:monitor(process, Pid),
   {reply, {ok, Pid}, S#state{limit = N - 1, refs = gb_sets:add(Ref, R)}};
-handle_call({run, _Args}, _From, S = #state{limit = N}) when N =< 0 ->
+handle_call(P = {run, _Args}, _From, S = #state{limit = N}) when N =< 0 ->
+  io:format("[~p]The pool Server handle a call, Param:~p Status:~p~n", [self(), P, S]),
   {reply, noalloc, S};
 handle_call({sync, Args}, _From, S = #state{limit = N, sup = Sup, refs = R}) when N > 0 ->
   {ok, Pid} = supervisor:start_child(Sup, Args),
@@ -78,13 +81,15 @@ handle_info({'DOWN', Ref, process, _Pid, _}, S = #state{refs = Refs}) ->
     false -> %% Not our responsibility
       {noreply, S}
   end;
-handle_info({start_worker_supervisor, _Sup, MFA}, S = #state{}) ->
+handle_info(P = {start_worker_supervisor, _Sup, MFA}, S = #state{}) ->
+  io:format("[~p]The pool server handle a info[start_worker_supervisor], param:~p status:~p ~n", [self(), P, S]),
   ppool_worker_sup:start_link(MFA),
   {noreply, S};
 handle_info(_Msg, State) ->
   {noreply, State}.
 
 handle_down_worker(Ref, S = #state{limit = L, sup = Sup, refs = Refs}) ->
+  io:format("[~p]The pool server handle a down worker, ~nparam:~p~n", [self(), S]),
   case queue:out(S#state.queue) of
     {{value, {From, Args}}, Q} ->
       {ok, Pid} = supervisor:start_child(Sup, Args),
@@ -98,6 +103,7 @@ handle_down_worker(Ref, S = #state{limit = L, sup = Sup, refs = Refs}) ->
       NewRefs = gb_sets:insert(NewRef, gb_sets:delete(Ref, Refs)),
       {noreply, S#state{refs = NewRefs, queue = Q}};
     {empty, _} ->
+      io:format("[~p]The pool server handle a down worker, empty queue. ~n", [self()]),
       {noreply, S#state{limit = L + 1, refs = gb_sets:delete(Ref, Refs)}}
   end.
 
